@@ -87,6 +87,16 @@ namespace Perplex.ArtsCouncil.MPImport
                         .Where(p => p.EndDate == null)
                         .Select(p => p.ParliamentaryPost.Name)
                         .ToArray();
+                var govPosts = m.MemberGovernmentPosts
+                    .Where(p => p.EndDate == null)
+                    .Select(p => p.GovernmentPost.Name)
+                    .ToArray();
+                member.GovernmentPosts = string.Join("; ", govPosts);
+                var oppPosts = m.MemberOppositionPosts
+                            .Where(p => p.EndDate == null)
+                            .Select(p => p.OppositionPost.Name)
+                            .ToArray();
+                member.OppositionPosts = string.Join("; ", oppPosts);
                 member.ParliamentaryPosts = string.Join("\n", parliamentaryPosts);
                 yield return member;
             }
