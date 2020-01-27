@@ -1,0 +1,152 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<integrationConfig>
+
+  <extensions>
+    <assembly name="Perplex.ArtsCouncil.MPImport" />
+  </extensions>
+
+  <connectionStrings>
+    <connectionString name="CRM">AuthType=Office365;Username=perplex@artscouncil.org.uk;Password=*****;Url=https://arts1.crm11.dynamics.com;Timeout=00:05:00</connectionString>
+    <connectionString name="StagingDB">Data Source=.;Initial Catalog=ArtsCouncil;Integrated Security=True</connectionString>
+    <connectionString name="ParliamentMembersPlatform">http://data.parliament.uk/membersdataplatform/open/OData.svc</connectionString>
+  </connectionStrings>
+  <jobs>
+    <!--<job id="ImportMPs" >
+      <step id="ImportMPs" type="Parliament Members Source">
+        <connection name="OdataUrl">ParliamentMembersPlatform</connection>
+      </step>
+      <step id="mapHouseToOptionSetValues" type="Field Value Mapper">
+        <mappings column="House" targetType="int">
+          <mapping from="Commons" to="805290000" />
+          <mapping from="Lords" to="805290001" />
+        </mappings>
+      </step>
+      <step id="renameFieldsToCrmLogicalNames" type="Field Renamer">
+        <rename from="Id" to="ace_mpmemberid" />
+        <rename from="FirstName" to="firstname" />
+        <rename from="MiddleNames" to="middlename" />
+        <rename from="LastName" to="lastname" />
+        <rename from="AddressAs" to="ace_addressas" />
+        <rename from="Party" to="ace_politicalparty" />
+        <rename from="IsActiveMember" to="ace_isactiveparliamentmember" />
+        <rename from="StartDate" to="ace_parliamentstartdate" />
+        <rename from="DateOfBirth" to="birthdate" />
+        <rename from="DateOfDeath" to="ace_deceasedon" />
+        <rename from="House" to="ace_parliamenthouse" />
+        <rename from="Constituency" to="new_constituency" />
+        <rename from="TypeOfPeer" to="ace_typeofpeer" />
+        <rename from="EndDate" to="ace_parliamentenddate" />
+        <rename from="EndReason" to="ace_parliamentendreason" />
+        <rename from="EmailAddress1" to="emailaddress1" />
+        <rename from="EmailAddress2" to="emailaddress2" />
+        <rename from="EmailAddress3" to="emailaddress3" />
+        <rename from="ParliamentaryPosts" to="ace_parliamentaryposts" />
+      </step>
+      <step id="Upload MPs CRM" type="D365ChangeControlledSink" >
+        <connection name="CRM">CRM</connection>
+        <connection name="LocalDB">StagingDB</connection>
+        <entityLogicalName>contact</entityLogicalName>
+        <entityKey>ace_mpmemberid</entityKey>
+        <maxNumberOfRequests>100</maxNumberOfRequests>
+      </step>
+    </job>-->
+    <job id="ImportMPs">
+      <!---->
+      <step id="Get MPs From data.parliament.uk" type="Parliament Members Source">
+        <connection name="OdataUrl">ParliamentMembersPlatform</connection>
+      </step>
+      <step id="Map House to option set values" type="Field Value Mapper">
+        <mappings column="House" targetType="int">
+          <mapping from="Commons" to="805290000" />
+          <mapping from="Lords" to="805290001" />
+        </mappings>
+      </step>
+      <step id="renameFieldsToCrmLogicalNames" type="Field Renamer">
+        <rename from="Id" to="ace_mpmemberid" />
+        <rename from="FirstName" to="firstname" />
+        <rename from="MiddleNames" to="middlename" />
+        <rename from="LastName" to="lastname" />
+        <rename from="AddressAs" to="ace_addressas" />
+        <rename from="Party" to="ace_politicalparty" />
+        <rename from="IsActiveMember" to="ace_isactiveparliamentmember" />
+        <rename from="StartDate" to="ace_parliamentstartdate" />
+        <rename from="DateOfBirth" to="birthdate" />
+        <rename from="DateOfDeath" to="ace_deceasedon" />
+        <rename from="House" to="ace_parliamenthouse" />
+        <rename from="Constituency" to="new_constituency" />
+        <rename from="TypeOfPeer" to="ace_typeofpeer" />
+        <rename from="EndDate" to="ace_parliamentenddate" />
+        <rename from="EndReason" to="ace_parliamentendreason" />
+        <rename from="EmailAddress1" to="emailaddress1" />
+        <rename from="EmailAddress2" to="emailaddress2" />
+        <rename from="EmailAddress3" to="emailaddress3" />
+        <rename from="ParliamentaryPosts" to="ace_parliamentaryposts" />
+      </step>
+      <!---->
+      <!--
+      <step id="Mock Source" type="ObjectSource">
+        <jsonObject>
+          {"firstname":"Kelvin","ace_politicalparty":"Independent","ace_isactiveparliamentmember":false,
+          "ace_parliamentstartdate":"1997-05-01T00:00:00","birthdate":"1941-08-22T00:00:00",
+          "ace_parliamentendreason":"Standing Down","emailaddress1":"hopkinsk@parliament.uk","ace_deceasedon":null,
+          "ace_parliamenthouse":805290000,"new_constituency":"Luton North","ace_parliamentenddate":"2019-11-06T00:00:00",
+          "middlename":"","lastname":"Hopkins","ace_addressas":"Kelvin Hopkins","ace_parliamentaryposts":"",
+          "ace_mpmemberid":2}
+        </jsonObject>
+        <jsonObject>
+          {"firstname":"Margaret","ace_politicalparty":"Labour","ace_isactiveparliamentmember":false,
+          "ace_parliamentstartdate":"1997-05-01T00:00:00","birthdate":"1955-04-24T00:00:00",
+          "ace_parliamentendreason":"Retired","ace_parliamentaryposts":"","ace_deceasedon":null,
+          "ace_parliamenthouse":805290000,"new_constituency":"Luton South","ace_parliamentenddate":"2010-05-06T00:00:00",
+          "middlename":"","lastname":"Moran","ace_addressas":"Margaret Moran","ace_mpmemberid":3}
+        </jsonObject>
+      </step>
+      -->
+      <step id="Ignore unchanged MPs" type="IgnoreUnchangedRows" >
+        <connection name="LocalDB">StagingDB</connection>
+        <tableName>MembersOfParliament</tableName>
+        <primaryKeyField>ace_mpmemberid</primaryKeyField>
+      </step>
+      <step id="Upload MPs CRM" type="CrmSink" >
+        <connection name="CRM">CRM</connection>
+        <connection name="LocalDB">StagingDB</connection>
+        <operation>Upsert</operation>
+        <entityLogicalName>contact</entityLogicalName>
+        <entityKey>ace_mpmemberid</entityKey>
+        <maxNumberOfRequests>250</maxNumberOfRequests>
+        <alternateKey>ace_mpmemberid</alternateKey>
+        <timeout>600</timeout>
+      </step>
+      <step id="Save uploaded MPs to DB" type="SqlJsonSink">
+        <connection name="LocalDB">StagingDB</connection>
+        <tableName>MembersOfParliament</tableName>
+        <primaryKeyField>ace_mpmemberid</primaryKeyField>
+        <commandTimeout>600</commandTimeout>
+      </step>
+    </job>
+    <job id="test">
+      <step id="Get Crm Contacts" type="CrmSource">
+        <connection name="CRM">CRM</connection>
+        <fetchXml>
+          <![CDATA[
+<fetch>
+  <entity name="contact" >
+    <attribute name="contactid" />
+    <attribute name="emailaddress1" />
+    <attribute name="emailaddress2" />
+    <attribute name="emailaddress3" />
+    <attribute name="new_grantiumcontacturn" />
+<!--
+<filter type="and" >
+      <condition attribute="createdon" operator="on-or-before" value="2018-12-31" />
+    </filter>
+    -->
+  </entity>
+</fetch>
+]]>
+        </fetchXml>
+      </step>
+      <step id="Log rows" type="RowLogger" />
+    </job>
+  </jobs>
+</integrationConfig>
