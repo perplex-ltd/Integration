@@ -46,9 +46,6 @@ namespace Perplex.Integration.Core.Steps
             EntityCollection results;
             do
             {
-                // Build fetchXml string with the placeholders.
-                //string xml = AddPagingToFetchXml(FetchXml, pagingCookie, pageNumber);
-
                 results = CrmServiceClient.RetrieveMultiple(query);
                 recordCount += results.Entities.Count;
                 Log.Information("Got {recordCount} records", recordCount);
@@ -70,7 +67,7 @@ namespace Perplex.Integration.Core.Steps
         /// Converts a CRM value into a regular value type.
         /// </summary>
         /// <remarks>
-        /// Quite shamelessly stolen from 
+        /// Rather shamelessly stolen from 
         /// https://github.com/jamesnovak/xrmtb.XrmToolBox.Controls/blob/master/XrmToolBox.Controls/Helper/EntitySerializer.cs.
         /// </remarks>
         /// <param name="value"></param>

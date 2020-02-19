@@ -13,13 +13,13 @@ namespace Perplex.Integration.Core.Steps
     [Step()]
     public class SqlJsonSink : AbstractSqlStep, IDataSink
     {
-        protected const string TempTableName = "#TempJsonObjects";
+        public string BulkLoadTableName { get; set; } = "#TempJsonObjects";
 
         public IPipelineInput Input { get; set; }
 
         [IntegerProperty(MinValue = 0, MaxValue = 100000)]
         public int BatchSize { get; set; }
-        [IntegerProperty(MinValue = 0, MaxValue = 100000, Description = "The timeout in seconds.")]
+        [IntegerProperty(MinValue = 0, MaxValue = 100000, Description = "The timeout for the bulk copy operation in seconds.")]
         public int Timeout { get; set; }
 
         [Property(Required = true, Description = "The name of the table to save the objects.")]
@@ -72,11 +72,11 @@ end
         {
             using var createTempTableCmd = DbConnection.CreateCommand();
             createTempTableCmd.CommandText = $@"
-create table [{TempTableName}] (
+create table [{BulkLoadTableName}] (
     JsonObject nvarchar(max) not null
 )
 ";
-            Log.Debug("Creating temporary table {tempTableName} with {CommandText}", TempTableName, createTempTableCmd.CommandText);
+            Log.Debug("Creating temporary table {tempTableName} with {CommandText}", BulkLoadTableName, createTempTableCmd.CommandText);
             createTempTableCmd.ExecuteNonQuery();
             // insert data into temp table
             using var dt = new DataTable();
@@ -88,7 +88,7 @@ create table [{TempTableName}] (
             }
             using var bulkCopy = new SqlBulkCopy(DbConnection)
             {
-                DestinationTableName = TempTableName,
+                DestinationTableName = BulkLoadTableName,
                 BatchSize = BatchSize,
                 BulkCopyTimeout = Timeout
             };

@@ -14,14 +14,9 @@ namespace Perplex.Integration.Core.Steps
         [ConnectionString("CRM", Type = "Dynamics365")]
         public string CrmConnectionString { get; set; }
         [Property(Description = "Timeout in seconds")]
-        public int Timeout { get; set; }
+        public int Timeout { get; set; } = 600;
 
         protected CrmServiceClient CrmServiceClient { get; private set; }
-
-        public AbstractCrmStep()
-        {
-            Timeout = 600;
-        }
 
         public override void Initialise()
         {
@@ -29,13 +24,18 @@ namespace Perplex.Integration.Core.Steps
             // CRM connection
             Log.Debug("Connecting to CRM.");
             CrmServiceClient = new CrmServiceClient(CrmConnectionString);
+            if (CrmServiceClient.OrganizationServiceProxy == null)
+            {
+                throw new StepException(Id, "Couldn't connect to CRM.");
+            }
             CrmServiceClient.OrganizationServiceProxy.Timeout = new TimeSpan(0, 0, Timeout);
         }
 
         public override void Cleanup()
         {
             CrmServiceClient?.Dispose();
-            _ = CrmServiceClient == null;
+            CrmServiceClient = null;
+            //_ = CrmServiceClient == null;
         }
 
     }

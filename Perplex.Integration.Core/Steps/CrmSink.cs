@@ -33,44 +33,41 @@ namespace Perplex.Integration.Core.Steps
         Insert,
         Update,
         Delete,
-        Upsert
+        Upsert,
+        InsertOrUpdate
     }
 
     [Step(Description = "Dynamics 365 Sink")]
     public class CrmSink : AbstractCrmStep, IDataSink, IDataSource
     {
         [IntegerProperty(MinValue = 1, MaxValue = 1000)]
-        public int MaxNumberOfRequests { get; set; }
+        public int MaxNumberOfRequests { get; set; } = 10;
         [Property()]
         public string EntityLogicalName { get; set; }
         [Property()]
-        public bool TakeOperationFromRow { get; set; }
+        public bool TakeOperationFromRow { get; set; } = false;
         [Property()]
-        public string OperationFieldName { get; set; }
+        public string OperationFieldName { get; set; } = "$operation";
+        /// <summary>
+        /// Specifies what operation should be carried out.
+        /// Use Insert, Update, Upsert or Delete for the respective CRM requests.
+        /// Use InsertOrUpdate to automatically insert or update data, depending on whether a row has a value for the primary key.
+        /// </summary>
         [Property()]
-        public Operation? Operation { get; set; }
+        public Operation? Operation { get; set; } = Steps.Operation.InsertOrUpdate;
         [Property()]
         public string AlternateKey { get; set; }
 
 
 
         [Property()]
-        public bool ContinueOnError { get; set; }
+        public bool ContinueOnError { get; set; } = true;
         public IPipelineInput Input { get; set; }
         public IPipelineOutput Output { get; set; }
 
         private EntityMetadata entityMetadata;
         private int recordCounter;
         private string primaryKeyField = null;
-
-        public CrmSink()
-        {
-            MaxNumberOfRequests = 10;
-            ContinueOnError = true;
-            TakeOperationFromRow = false;
-            OperationFieldName = "$op";
-            Timeout = 600;
-        }
 
         public override void Validate()
         {
@@ -87,6 +84,10 @@ namespace Perplex.Integration.Core.Steps
             recordCounter = 0;
         }
 
+
+        /// <summary>
+        /// Uploaded all records to CRM.
+        /// </summary>
         public override void Execute()
         {
             // prepare rows needing to be uploaded
@@ -107,13 +108,25 @@ namespace Perplex.Integration.Core.Steps
             }
         }
 
+        /// <summary>
+        /// Converts all rows in <paramref name="batch"/> to CRM request and uploads them.
+        /// </summary>
+        /// <param name="batch"></param>
         private void UploadBatch(IList<Row> batch)
         {
             // Create request
             var requests = new List<OrganizationRequest>(MaxNumberOfRequests);
             foreach (var row in batch)
             {
-                requests.Add(CreateRequest(row));
+                try
+                {
+                    requests.Add(CreateRequest(row));
+                } 
+                catch (Exception ex)
+                {
+                    Log.Error("{ex} while processing row {row}", ex.Message, row.ToJson());
+                    if (!ContinueOnError) throw;
+                }
             }
             var executeMultipleRequest = new ExecuteMultipleRequest()
             {
@@ -139,8 +152,23 @@ namespace Perplex.Integration.Core.Steps
                 }
                 else
                 {
-                    Output.AddRow(batch[i]);
                     recordCounter++;
+                    switch (response.Response)
+                    {
+                        case CreateResponse cr: 
+                            batch[i][primaryKeyField] = cr.id;
+                            Output.AddRow(batch[i]);
+                            break;
+                        case UpsertResponse usr:
+                            batch[i][primaryKeyField] = usr.Target.Id;
+                            Output.AddRow(batch[i]);
+                            break;
+                        case UpdateResponse _:
+                            Output.AddRow(batch[i]);
+                            break;
+                        case DeleteResponse _: 
+                            break;
+                    }
                 }
             }
             Log.Information("Uploaded {recordCounter} records", recordCounter);
@@ -156,9 +184,19 @@ namespace Perplex.Integration.Core.Steps
                 string.IsNullOrEmpty(AlternateKey) ? new Entity(EntityLogicalName) :
                 new Entity(EntityLogicalName, AlternateKey, GetCrmValue(AlternateKey, row[AlternateKey]));
             // add primary key field (e.g. contactid) if it exists in row
-            if (row.ContainsKey(primaryKeyField) && row[primaryKeyField] != null)
+            if (row.ContainsKey(primaryKeyField) && row[primaryKeyField] != null && !(row[primaryKeyField] is DBNull))
             {
-                entity.Id = (Guid)row[primaryKeyField];
+                try
+                {
+                    entity.Id = (Guid)row[primaryKeyField];
+                } catch (InvalidCastException)
+                {
+                    throw new StepException(Id, $"'{primaryKeyField}' is not a valid guid.");
+                }
+            }
+            if (operation == Steps.Operation.InsertOrUpdate)
+            {
+                operation = (entity.Id == Guid.Empty) ? Steps.Operation.Insert : Steps.Operation.Update;
             }
             // if this is a delete operation, we don't need to add attributes
             if (operation == Steps.Operation.Delete)
@@ -169,7 +207,7 @@ namespace Perplex.Integration.Core.Steps
                 };
             }
             // add all attributes apart from primary key and alternate key
-            foreach (string column in row.Columns.Where(c => (c != AlternateKey) || (c != primaryKeyField)))
+            foreach (string column in row.Columns.Where(c => (c != AlternateKey) && (c != primaryKeyField)))
             {
                 entity[column] = GetCrmValue(column, row[column]);
             }
@@ -192,7 +230,7 @@ namespace Perplex.Integration.Core.Steps
         private object GetCrmValue(string attributeName, object value)
         {
 
-            if (value == null) return null;
+            if ((value == null)||(value is DBNull)) return null;
             var attribute = entityMetadata.Attributes.FirstOrDefault(a => a.LogicalName == attributeName);
             if (attribute == null)
                 throw new StepException("Specified field {0} does not exist in entity {1}", attributeName, EntityLogicalName);
@@ -202,7 +240,8 @@ namespace Perplex.Integration.Core.Steps
                 {
                     // Categorization data attributes
                     case AttributeTypeCode.Picklist:
-                    case AttributeTypeCode.Status: return new OptionSetValue(((IConvertible)value).ToInt32(System.Globalization.CultureInfo.InvariantCulture));
+                    case AttributeTypeCode.Status:
+                        return ConvertValueToEnumAttributeValue(value, (EnumAttributeMetadata)attribute);
                     case AttributeTypeCode.State: throw new StepAttributeTypeNotSupportedException(Id, attribute);
                     case AttributeTypeCode.Boolean: return (bool)value;
                     case AttributeTypeCode.EntityName: throw new StepAttributeTypeNotSupportedException(Id, attribute);
@@ -229,7 +268,9 @@ namespace Perplex.Integration.Core.Steps
                     // Unique identifier data attributes
                     case AttributeTypeCode.Uniqueidentifier: throw new StepAttributeTypeNotSupportedException(Id, attribute);
                     // Virtual attributes
-                    case AttributeTypeCode.Virtual: throw new StepAttributeTypeNotSupportedException(Id, attribute);
+                    case AttributeTypeCode.Virtual:
+                        if (attribute is MultiSelectPicklistAttributeMetadata mspAttribute) return ConvertToMultiSelectPickListValue(value, mspAttribute);
+                        else throw new StepAttributeTypeNotSupportedException(Id, attribute);
                     case AttributeTypeCode.ManagedProperty: throw new StepAttributeTypeNotSupportedException(Id, attribute);
                     default: throw new StepException("Attribute {0} has an unknown data type.", attributeName);
                 }
@@ -240,5 +281,29 @@ namespace Perplex.Integration.Core.Steps
             }
         }
 
+        private OptionSetValue ConvertValueToEnumAttributeValue(object value, EnumAttributeMetadata attribute)
+        {
+            return (value is string label) ? ConvertStringToOptionSetValue(label, attribute) :
+                                        new OptionSetValue(((IConvertible)value).ToInt32(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        private OptionSetValueCollection ConvertToMultiSelectPickListValue(object value, MultiSelectPicklistAttributeMetadata attribute)
+        {
+            var osValue = ConvertValueToEnumAttributeValue(value, attribute);
+            if (osValue == null) return null;
+            var collection = new OptionSetValueCollection
+            {
+                osValue
+            };
+            return collection;
+        }
+
+        private OptionSetValue ConvertStringToOptionSetValue(string label, EnumAttributeMetadata attribute)
+        {
+            if (string.IsNullOrEmpty(label)) return null;
+            var option = attribute.OptionSet.Options.FirstOrDefault(o => o.Label.UserLocalizedLabel.Label == label);
+            if (option == null) throw new StepException(Id, $"No option set value with label '{label}' exists.");
+            return new OptionSetValue(option.Value.Value);
+        }
     }
 }

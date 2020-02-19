@@ -35,7 +35,7 @@ namespace Perplex.Integration.Core.Steps
             cmd.CommandTimeout = CommandTimeout;
             cmd.CommandText = $@"
 declare @JsonKeyPath as nvarchar(50) = '$.' + @KeyField;
-select o1.JsonObject from [{TempTableName}] o1
+select o1.JsonObject from [{BulkLoadTableName}] o1
 left join [{TableName}] o2 on json_value(o1.JsonObject, @JsonKeyPath) = json_value(o2.JsonObject, @JsonKeyPath)
 where
     json_value(o2.JsonObject, @JsonKeyPath) is null or

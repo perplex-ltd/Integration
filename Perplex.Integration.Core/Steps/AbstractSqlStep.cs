@@ -1,4 +1,5 @@
 ﻿using Perplex.Integration.Core.Configuration;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -10,11 +11,14 @@ namespace Perplex.Integration.Core.Steps
 {
     public abstract class AbstractSqlStep : JobStep
     {
-        [ConnectionString("LocalDB", Type = "Sql")]
+        [ConnectionString("db", Type = "Sql")]
         public string DbConnectionString { get; set; }
         [Property()]
         public int CommandTimeout { get; set; }
         protected SqlConnection DbConnection { get; private set; }
+
+        [Property(Description ="If set, this statement is run once before the step is executed.")]
+        public string PreExecuteSqlStatement { get; set; }
 
         public AbstractSqlStep()
         {
@@ -30,6 +34,22 @@ namespace Perplex.Integration.Core.Steps
             // SQL DB init stuff
             DbConnection = new SqlConnection(DbConnectionString);
             DbConnection.Open();
+            // Pre execute statement
+            RunPreExecuteSql();
+        }
+
+        /// <summary>
+        /// Runs the <see cref="PreExecuteSqlStatement"/>.
+        /// </summary>
+        protected virtual void RunPreExecuteSql()
+        {
+            if (!string.IsNullOrEmpty(PreExecuteSqlStatement))
+            {
+                using SqlCommand preCmd = DbConnection.CreateCommand();
+                preCmd.CommandText = PreExecuteSqlStatement;
+                Log.Verbose("Executing {PreExecuteSqlStatement}", preCmd.CommandText);
+                preCmd.ExecuteNonQuery();
+            }
         }
 
 
