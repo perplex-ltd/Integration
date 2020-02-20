@@ -42,7 +42,7 @@ where
 	o1.JsonObject != o2.JsonObject;
 ";
             cmd.Parameters.AddWithValue("@KeyField", PrimaryKeyField);
-            Log.Debug("Retrieving changed objects using {CommandText}", cmd.CommandText);
+            Log.Verbose("Retrieving changed objects using {CommandText}", cmd.CommandText);
             using var reader = cmd.ExecuteReader();
             while(reader.Read())
             {

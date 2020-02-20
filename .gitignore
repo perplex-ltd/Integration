@@ -360,3 +360,5 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+/Perplex.Integration.RunJob/RunAll.bat
+/Perplex.Integration.RunJob/AceIntegrationConfig.test.xml

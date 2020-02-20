@@ -7,7 +7,7 @@
     <ProjectGuid>{207EADCF-9F57-40CF-A3AF-B9110A423654}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>Perplex.Integration.RunJob</RootNamespace>
-    <AssemblyName>Perplex.Integration.RunJob</AssemblyName>
+    <AssemblyName>RunJob</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -72,6 +72,9 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="RunAll.bat">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Perplex.ArtsCouncil.MPImport\Perplex.ArtsCouncil.MPImport.csproj">
@@ -84,7 +87,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="AceIntegrationConfig.xml">
+    <Content Include="AceIntegrationConfig.test.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="app.ico" />

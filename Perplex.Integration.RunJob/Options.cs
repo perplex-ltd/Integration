@@ -12,12 +12,12 @@ namespace Perplex.Integration.RunJob
     {
 
         [Option('c', "configuration", Default = "integrationconfig.xml", 
-            HelpText = "The integration config file (default: integrationconfig.xml).",
+            HelpText = "The integration config file.",
            Required = false)]
         public string IntegrationConfigFile { get; set; }
 
         [Option('j', "job", Default = null,
-            HelpText = "The job to run. If not specified, the first job will be run.",
+            HelpText = "The job to run.",
            Required = true)]
         public string Job { get; set; }
         [Option('l', "logLevel", Default = LogEventLevel.Debug, HelpText = "The minimum log level (Verbose, Debug, Information, Warning, Error or Fatal)")]

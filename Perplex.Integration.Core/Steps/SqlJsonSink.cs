@@ -49,7 +49,7 @@ begin
 end
 ";
             cmd.Parameters.AddWithValue("@TableName", TableName);
-            Log.Debug("Initialising table {TableName} with {CommandText}", TableName, cmd.CommandText);
+            Log.Verbose("Initialising table {TableName} with {CommandText}", TableName, cmd.CommandText);
             cmd.ExecuteNonQuery();
         }
 
@@ -76,7 +76,7 @@ create table [{BulkLoadTableName}] (
     JsonObject nvarchar(max) not null
 )
 ";
-            Log.Debug("Creating temporary table {tempTableName} with {CommandText}", BulkLoadTableName, createTempTableCmd.CommandText);
+            Log.Verbose("Creating temporary table {tempTableName} with {CommandText}", BulkLoadTableName, createTempTableCmd.CommandText);
             createTempTableCmd.ExecuteNonQuery();
             // insert data into temp table
             using var dt = new DataTable();

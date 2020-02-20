@@ -11,7 +11,7 @@ namespace Perplex.Integration.RunJob
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Perplex Integration Core (c) Perplex Ltd 2020");
+            Console.WriteLine("Jigsaw Integration (c) Perplex Ltd 2020");
             try
             {
                 Parser.Default.ParseArguments<Options>(args).WithParsed(o =>
@@ -43,6 +43,8 @@ namespace Perplex.Integration.RunJob
                 .ReadFrom.AppSettings()
                 .Enrich.WithExceptionDetails()
                 .Enrich.FromLogContext()
+                .MinimumLevel.Debug()
+                .WriteTo.File("logs\\log-.txt", rollingInterval: RollingInterval.Day)
                 .MinimumLevel.Is(options.LogLevel)
                 .WriteTo.Console()
                 .CreateLogger();

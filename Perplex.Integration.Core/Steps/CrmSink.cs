@@ -121,7 +121,7 @@ namespace Perplex.Integration.Core.Steps
                 try
                 {
                     requests.Add(CreateRequest(row));
-                } 
+                }
                 catch (Exception ex)
                 {
                     Log.Error("{ex} while processing row {row}", ex.Message, row.ToJson());
@@ -155,7 +155,7 @@ namespace Perplex.Integration.Core.Steps
                     recordCounter++;
                     switch (response.Response)
                     {
-                        case CreateResponse cr: 
+                        case CreateResponse cr:
                             batch[i][primaryKeyField] = cr.id;
                             Output.AddRow(batch[i]);
                             break;
@@ -166,7 +166,7 @@ namespace Perplex.Integration.Core.Steps
                         case UpdateResponse _:
                             Output.AddRow(batch[i]);
                             break;
-                        case DeleteResponse _: 
+                        case DeleteResponse _:
                             break;
                     }
                 }
@@ -182,14 +182,15 @@ namespace Perplex.Integration.Core.Steps
             // create entity object with alternate key, if it is specified.
             Entity entity =
                 string.IsNullOrEmpty(AlternateKey) ? new Entity(EntityLogicalName) :
-                new Entity(EntityLogicalName, AlternateKey, GetCrmValue(AlternateKey, row[AlternateKey]));
+                new Entity(EntityLogicalName, AlternateKey, GetCrmValue(AlternateKey, row[AlternateKey], null));
             // add primary key field (e.g. contactid) if it exists in row
             if (row.ContainsKey(primaryKeyField) && row[primaryKeyField] != null && !(row[primaryKeyField] is DBNull))
             {
                 try
                 {
                     entity.Id = (Guid)row[primaryKeyField];
-                } catch (InvalidCastException)
+                }
+                catch (InvalidCastException)
                 {
                     throw new StepException(Id, $"'{primaryKeyField}' is not a valid guid.");
                 }
@@ -207,9 +208,16 @@ namespace Perplex.Integration.Core.Steps
                 };
             }
             // add all attributes apart from primary key and alternate key
-            foreach (string column in row.Columns.Where(c => (c != AlternateKey) && (c != primaryKeyField)))
+            foreach (string column in row.Columns.Where(
+                c => (c != AlternateKey) && (c != primaryKeyField) && !c.Contains("$")))
             {
-                entity[column] = GetCrmValue(column, row[column]);
+                // get meta attributes (i.e. the ones with $ in their name, used for Lookup attributes)
+                var metaValues = new Dictionary<string, object>();
+                foreach (var mv in row.Columns.Where(mc => mc.StartsWith($"{column}$")).Select(mc => new { Column = mc.Replace($"{column}$", string.Empty), Value = row[mc] }))
+                {
+                    metaValues.Add(mv.Column, mv.Value);
+                }
+                entity[column] = GetCrmValue(column, row[column], metaValues);
             }
             return operation switch
             {
@@ -227,13 +235,13 @@ namespace Perplex.Integration.Core.Steps
         /// <param name="value"></param>
         /// <seealso cref="https://docs.microsoft.com/en-us/dynamics365/customerengagement/on-premises/developer/introduction-to-entity-attributes"/>
         /// <returns></returns>
-        private object GetCrmValue(string attributeName, object value)
+        private object GetCrmValue(string attributeName, object value, Dictionary<string, object> metaValues)
         {
 
-            if ((value == null)||(value is DBNull)) return null;
+            if ((value == null) || (value is DBNull)) return null;
             var attribute = entityMetadata.Attributes.FirstOrDefault(a => a.LogicalName == attributeName);
             if (attribute == null)
-                throw new StepException("Specified field {0} does not exist in entity {1}", attributeName, EntityLogicalName);
+                throw new StepException(Id, $"Field {attributeName} does not exist in entity {EntityLogicalName}");
             try
             {
                 switch (attribute.AttributeType)
@@ -243,7 +251,8 @@ namespace Perplex.Integration.Core.Steps
                     case AttributeTypeCode.Status:
                         return ConvertValueToEnumAttributeValue(value, (EnumAttributeMetadata)attribute);
                     case AttributeTypeCode.State: throw new StepAttributeTypeNotSupportedException(Id, attribute);
-                    case AttributeTypeCode.Boolean: return (bool)value;
+                    case AttributeTypeCode.Boolean:
+                        return ConvertValueToBooleanAttributeValue(value, (BooleanAttributeMetadata)attribute);
                     case AttributeTypeCode.EntityName: throw new StepAttributeTypeNotSupportedException(Id, attribute);
                     // Collection data attributes
                     case AttributeTypeCode.CalendarRules: throw new StepAttributeTypeNotSupportedException(Id, attribute);
@@ -256,11 +265,19 @@ namespace Perplex.Integration.Core.Steps
                     case AttributeTypeCode.Decimal: return (decimal)value;
                     case AttributeTypeCode.Double: return (double)value;
                     case AttributeTypeCode.Integer: return ((IConvertible)value).ToInt32(System.Globalization.CultureInfo.InvariantCulture);
-                    case AttributeTypeCode.Money: return new Money((decimal)value);
+                    case AttributeTypeCode.Money: return new Money(((IConvertible)value).ToDecimal(System.Globalization.CultureInfo.InvariantCulture));
                     // Reference data attributes
                     // TODO: Reference attributes
                     case AttributeTypeCode.Customer:
+                        if (!metaValues.ContainsKey("type"))
+                            throw new StepException(Id, $"Must specify target type in {attribute.LogicalName}$type column for Customer attributes");
+                        var target = (string)metaValues["type"];
+                        return (metaValues.ContainsKey("key")) ? new EntityReference(target, (string)metaValues["key"], value) :
+                            new EntityReference(target, (Guid)value);
                     case AttributeTypeCode.Lookup:
+                        target = ((LookupAttributeMetadata)attribute).Targets.FirstOrDefault();
+                        return (metaValues.ContainsKey("key")) ? new EntityReference(target, (string)metaValues["key"], value) :
+                            new EntityReference(target, (Guid)value);
                     case AttributeTypeCode.Owner: throw new StepAttributeTypeNotSupportedException(Id, attribute);
                     // String data attributes
                     case AttributeTypeCode.String:
@@ -277,7 +294,50 @@ namespace Perplex.Integration.Core.Steps
             }
             catch (InvalidCastException)
             {
-                throw new StepException(Id, "Could not convert attribute {0} ({1}) into {2}.", attributeName, value.GetType().Name, attribute.AttributeTypeName);
+                throw new StepException(Id, "Could not convert attribute {0} ({1}) into {2}.", attributeName, value.GetType().Name, attribute.AttributeTypeName.Value);
+            }
+        }
+
+        private bool ConvertValueToBooleanAttributeValue(object value, BooleanAttributeMetadata attribute)
+        {
+            if (value is string label)
+            {
+                if (label.Equals(attribute.OptionSet.TrueOption.Label.UserLocalizedLabel.Label, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    return true;
+                }
+                else if (label.Equals(attribute.OptionSet.FalseOption.Label.UserLocalizedLabel.Label, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    return false;
+                }
+                else
+                {
+                    throw new StepException(Id, $"'{label}' is not a valid option for {attribute.LogicalName}.");
+                }
+            }
+            else
+            {
+                int optionValue = 0;
+                try
+                {
+                    optionValue = ((IConvertible)value).ToInt32(System.Globalization.CultureInfo.InvariantCulture);
+                }
+                catch (Exception)
+                {
+                    throw new StepException(Id, $"Cannot convert {value} ({value.GetType()}) into an integer.");
+                }
+                if (optionValue == attribute.OptionSet.TrueOption.Value)
+                {
+                    return true;
+                }
+                else if (optionValue == attribute.OptionSet.FalseOption.Value)
+                {
+                    return false;
+                }
+                else
+                {
+                    throw new StepException(Id, $"{optionValue} is not a valid option for {attribute.LogicalName}.");
+                }
             }
         }
 
