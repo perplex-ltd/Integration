@@ -2,6 +2,7 @@
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -36,37 +37,52 @@ namespace Perplex.Integration.Core
         /// </summary>
         public void Run()
         {
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
             Log.Information("Running Job {Id}", Id);
             ValidateJob();
             foreach (var step in steps)
             {
-                if (step is IDataSink sinkStep)
+                try
                 {
-                    Log.Information("Running step {step} with {count} rows", step.Id, sinkStep.Input.Count);
+                    if (step is IDataSink sinkStep)
+                    {
+                        Log.Information("Running step {step} with {count} rows", step.Id, sinkStep.Input.Count);
+                    }
+                    else
+                    {
+                        Log.Information("Running step {step}", step.Id);
+                    }
+                    Log.Debug("Initialising...");
+                    step.Initialise();
+                    Log.Debug("Executing...");
+                    step.Execute();
+                    Log.Debug("Cleaning up...");
+                    step.Cleanup();
                 }
-                else
+                catch (StepException ex)
                 {
-                    Log.Information("Running step {step}", step.Id);
+                    Log.Fatal("Error while running step {step.Id}: {ex.Message}", step.Id, ex.Message);
                 }
-                Log.Debug("Initialising...");
-                step.Initialise();
-                Log.Debug("Executing...");
-                step.Execute();
-                Log.Debug("Cleaning up...");
-                step.Cleanup();
-                
+                catch (Exception ex)
+                {
+                    Log.Fatal(ex, "Error while running step {step.Id}: {ex.Message}", step.Id, ex.Message);
+                }
             }
+            stopwatch.Stop();
+            Log.Information("Job {jobId} finished in {stopwatch.Elapsed}.", Id, stopwatch.Elapsed);
         }
 
         private void ValidateJob()
         {
             if (steps.Count == 0)
                 throw new InvalidOperationException("Job cannot be empty.");
-            if (steps.Last() is IDataSource lastSource) {
+            if (steps.Last() is IDataSource lastSource)
+            {
                 lastSource.Output = new NullPipelineOutput();
                 //throw new InvalidOperationException("Last step in a job must not be a Data Source");
             }
-                
+
             foreach (var step in steps)
             {
                 try

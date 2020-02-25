@@ -59,7 +59,7 @@ namespace Perplex.Integration.Core.Steps
                     Log.Error("'{ex.Message}' for row {row}", ex.Message, row);
                     if (!ContinueOnError)
                     {
-                        throw new StepException(Id, "Failed to run query.");
+                        throw new StepException("Failed to run query.");
                     }
                 }
             }

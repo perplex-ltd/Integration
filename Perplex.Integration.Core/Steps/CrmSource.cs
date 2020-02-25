@@ -100,7 +100,7 @@ namespace Perplex.Integration.Core.Steps
                     {
                         result += ",";
                     }
-                    if (referencedEntity != "")
+                    if (!string.IsNullOrEmpty(referencedEntity))
                     {
                         result += er.Id.ToString();
                     }
@@ -119,7 +119,7 @@ namespace Perplex.Integration.Core.Steps
 
                     foreach (var entity in ((EntityCollection)value).Entities)
                     {
-                        if (result != "")
+                        if (!string.IsNullOrEmpty(result))
                         {
                             result += ",";
                         }
@@ -132,7 +132,7 @@ namespace Perplex.Integration.Core.Steps
             else if (value is OptionSetValue)
                 return ((OptionSetValue)value).Value;
             else if (value is OptionSetValueCollection)
-                return "[" + string.Join(",", ((OptionSetValueCollection)value).Select(v => v.Value.ToString())) + "]";
+                return "[" + string.Join(",", ((OptionSetValueCollection)value).Select(v => v.Value.ToString(CultureInfo.InvariantCulture))) + "]";
             else if (value is Money)
                 return ((Money)value).Value;
             else if (value is BooleanManagedProperty)

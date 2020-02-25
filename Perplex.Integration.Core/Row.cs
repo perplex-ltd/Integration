@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Perplex.Integration.Core
 {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix", Justification = "Nope")]
+    [Serializable]
     public class Row : Dictionary<string, object>
     {
 
@@ -39,6 +39,11 @@ namespace Perplex.Integration.Core
             return new Row(
                 Newtonsoft.Json.JsonConvert.DeserializeObject<IDictionary<string, object>>(values)
                 );
+        }
+
+        protected Row(System.Runtime.Serialization.SerializationInfo serializationInfo, System.Runtime.Serialization.StreamingContext streamingContext)
+        {
+            throw new NotImplementedException();
         }
     }
 }

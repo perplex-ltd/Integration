@@ -17,7 +17,12 @@ namespace Perplex.Integration.Core.Configuration
         private InvalidConfigurationException() { }
         public InvalidConfigurationException(string message) : base(message) { }
         public InvalidConfigurationException(string message, Exception innerException) : base(message, innerException) { }
-        public InvalidConfigurationException(string message, params object[] args) : base(string.Format(message, args)) { }
+        public InvalidConfigurationException(string message, params object[] args) : base(string.Format(System.Globalization.CultureInfo.InvariantCulture, message, args)) { }
+
+        protected InvalidConfigurationException(System.Runtime.Serialization.SerializationInfo serializationInfo, System.Runtime.Serialization.StreamingContext streamingContext)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class ConfigFactory
@@ -66,6 +71,7 @@ namespace Perplex.Integration.Core.Configuration
             {
                 var jobId = jobElement.Attribute("id")?.Value;
                 if (string.IsNullOrEmpty(jobId)) throw new InvalidConfigurationException("No Job Id specified.");
+                if (config.Jobs.ContainsKey(jobId)) throw new InvalidConfigurationException($"Job '{jobId}' exists more than once in config.");
                 var job = new Job()
                 {
                     Id = jobId
@@ -85,7 +91,7 @@ namespace Perplex.Integration.Core.Configuration
                     catch (Exception ex)
                     {
                         throw new InvalidConfigurationException(
-                            string.Format("Invalid configuration for '{0}' step in job '{1}': {2}",
+                            string.Format(System.Globalization.CultureInfo.InvariantCulture, "Invalid configuration for '{0}' step in job '{1}': {2}",
                                 string.IsNullOrEmpty(stepId) ? "anonymous" : stepId, jobId, ex.Message),
                             ex);
                     }
@@ -130,7 +136,7 @@ namespace Perplex.Integration.Core.Configuration
                     {
                         name = p.Property.Name;
                     }
-                    name = convertToXmlConfigName(name);
+                    name = ConvertToXmlConfigName(name);
                     // collection property
                     if (IsCollection(p.Property.PropertyType))
                     {
@@ -178,7 +184,7 @@ namespace Perplex.Integration.Core.Configuration
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
-        private string convertToXmlConfigName(string name)
+        private static string ConvertToXmlConfigName(string name)
         {
             if (string.IsNullOrEmpty(name) || char.IsLower(name, 0))
                 return name;

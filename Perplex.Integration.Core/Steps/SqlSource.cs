@@ -31,7 +31,7 @@ namespace Perplex.Integration.Core.Steps
                     row.Add(rs.GetName(i), rs.GetValue(i));
                 }
                 Output.AddRow(row);
-                if (counter % 10000 == 0)
+                if (counter % 5000 == 0)
                 {
                     Log.Debug("Got {counter} rows", counter);
                 }

@@ -71,7 +71,7 @@ namespace Perplex.Integration.Core.Steps
             foreach (DataColumn column in dt.Columns)
             {
                 int destPos = destinationColumns.IndexOf(column.ColumnName);
-                if (destPos < 0) throw new StepException(Id, $"Column {column.ColumnName} does not exist in target table {TableName}.");
+                if (destPos < 0) throw new StepException($"Column {column.ColumnName} does not exist in target table {TableName}.");
                 bulkCopy.ColumnMappings.Add(srcPos, destPos);
                 srcPos++;
             }

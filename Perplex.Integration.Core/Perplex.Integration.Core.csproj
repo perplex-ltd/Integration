@@ -110,6 +110,7 @@
     <Compile Include="Internal\NullPipeline.cs" />
     <Compile Include="Steps\AbstractCrmStep.cs" />
     <Compile Include="Steps\AbstractSqlStep.cs" />
+    <Compile Include="Steps\EstablishCrmOptionSetValues.cs" />
     <Compile Include="Steps\SqlSink.cs" />
     <Compile Include="Steps\SqlSource.cs" />
     <Compile Include="Steps\CrmSource.cs" />

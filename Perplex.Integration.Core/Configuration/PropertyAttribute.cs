@@ -19,5 +19,6 @@ namespace Perplex.Integration.Core.Configuration
         public bool Inline { get; set; }
 
         public string Description { get; set; }
+        public object Default { get; set; }
     }
 }
