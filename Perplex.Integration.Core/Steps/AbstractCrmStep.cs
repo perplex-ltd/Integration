@@ -24,9 +24,9 @@ namespace Perplex.Integration.Core.Steps
             // CRM connection
             Log.Debug("Connecting to CRM.");
             CrmServiceClient = new CrmServiceClient(CrmConnectionString);
-            if (CrmServiceClient.OrganizationServiceProxy == null)
+            if (!CrmServiceClient.IsReady)
             {
-                throw new StepException("Couldn't connect to CRM.");
+                throw new StepException($"Couldn't connect to CRM: {CrmServiceClient.LastCrmError}");
             }
             CrmServiceClient.OrganizationServiceProxy.Timeout = new TimeSpan(0, 0, Timeout);
         }

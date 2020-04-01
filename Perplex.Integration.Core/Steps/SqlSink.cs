@@ -10,9 +10,10 @@ using System.Threading.Tasks;
 namespace Perplex.Integration.Core.Steps
 {
     [Step(Description = "Executes a SQL query for each record, passing the record's fields as parameters to the query.")]
-    public class SqlSink : AbstractSqlStep, IDataSink
+    public class SqlSink : AbstractSqlStep, IDataSink, IDataSource
     {
         public IPipelineInput Input { get; set; }
+        public IPipelineOutput Output { get; set; }
         [Property(Required = true, Description = "A query that is used to insert or update rows.")]
         public string Query { get; set; }
         [Property()]
@@ -48,6 +49,7 @@ namespace Perplex.Integration.Core.Steps
                 try
                 {
                     int affectedRows = cmd.ExecuteNonQuery();
+                    Output.AddRow(row);
                     Log.Verbose("Command {cmd} affected {affectedRows} rows.", cmd, affectedRows);
                     if (++counter % 10000 == 0)
                     {

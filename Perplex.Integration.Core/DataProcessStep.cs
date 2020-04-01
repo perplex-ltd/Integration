@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 namespace Perplex.Integration.Core
 {
-    public abstract class DataProcessStep : JobStep, IDataSource, IDataSink
+    /// <summary>
+    /// Represents a step with an Input and an output.
+    /// </summary>
+    public abstract class DataProcessStep: JobStep, IDataSource, IDataSink
     {
         public IPipelineOutput Output { get; set; }
         public IPipelineInput Input { get; set; }

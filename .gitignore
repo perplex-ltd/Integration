@@ -362,3 +362,4 @@ MigrationBackup/
 .ionide/
 /Perplex.Integration.RunJob/RunAll.bat
 /Perplex.Integration.RunJob/AceIntegrationConfig.test.xml
+/Perplex.Integration.Jigsaw

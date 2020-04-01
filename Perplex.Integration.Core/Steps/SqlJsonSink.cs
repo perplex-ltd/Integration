@@ -26,6 +26,8 @@ namespace Perplex.Integration.Core.Steps
         public string TableName { get; set; }
         [Property(Required = true, Description = "The name of the primary key field of the data.")]
         public string PrimaryKeyField { get; set; }
+
+
         public SqlJsonSink()
         {
             BatchSize = 1000;
@@ -43,6 +45,7 @@ namespace Perplex.Integration.Core.Steps
 if not exists(select * from sys.tables where [name] = @TableName)
 begin
 	create table [{TableName}] (
+        Id nvarchar(200) primary key clustered,
 		JsonObject nvarchar(max) not null,
         UpdatedOn DateTime not null
 	);
@@ -61,18 +64,47 @@ end
             // creating temp table
             InsertRecords();
             // Merge temp table 
+            Log.Debug("Merging records...");
             MergeRecords();
 
         }
 
+        public override void Cleanup()
+        {
+            using var dropTempTableCmd = DbConnection.CreateCommand();
+            dropTempTableCmd.CommandText = $@"
+drop table [{BulkLoadTableName}];
+";
+            Log.Verbose("Dropping temporary table {tempTableName} with {CommandText}", BulkLoadTableName, dropTempTableCmd.CommandText);
+            try
+            {
+                dropTempTableCmd.ExecuteNonQuery();
+            } 
+            catch (SqlException ex)
+            {
+                Log.Warning("Couldn't drop table {BulkLoadTableName}: {ex}", BulkLoadTableName, ex.Message);
+            }
+            base.Cleanup();
+        }
+
         /// <summary>
-        /// Inserts all rows as Json Objects into a temporary table.
+        /// This method is called whenever a row is being removed from the input.
+        /// </summary>
+        /// <param name="row"></param>
+        protected virtual void OnRowRemoved(string key, Row row)
+        {
+
+        }
+
+        /// <summary>
+        /// Inserts all rows having a valid <see cref="PrimaryKeyField"/> as Json Objects into a temporary table.
         /// </summary>
         private void InsertRecords()
         {
             using var createTempTableCmd = DbConnection.CreateCommand();
             createTempTableCmd.CommandText = $@"
 create table [{BulkLoadTableName}] (
+    Id nvarchar(200) Primary Key clustered,
     JsonObject nvarchar(max) not null
 )
 ";
@@ -81,10 +113,20 @@ create table [{BulkLoadTableName}] (
             // insert data into temp table
             using var dt = new DataTable();
 
+            dt.Columns.Add("Id", typeof(string)); 
             dt.Columns.Add("JsonObject", typeof(string));
             while (Input.HasRowsAvailable)
             {
-                dt.Rows.Add(Input.RemoveRow().ToJson());
+                var row = Input.RemoveRow();
+                if (row.ContainsKey(PrimaryKeyField))
+                {
+                    var key = row[PrimaryKeyField]?.ToString();
+                    if (!string.IsNullOrEmpty(key))
+                    {
+                        OnRowRemoved(key, row);
+                        dt.Rows.Add(key, row.ToJson());
+                    }
+                }
             }
             using var bulkCopy = new SqlBulkCopy(DbConnection)
             {
@@ -92,7 +134,7 @@ create table [{BulkLoadTableName}] (
                 BatchSize = BatchSize,
                 BulkCopyTimeout = Timeout
             };
-            Log.Debug("Writing data to {DestinationTableName}", bulkCopy.DestinationTableName);
+            Log.Debug("Loading {records} records into {DestinationTableName}", dt.Rows.Count, bulkCopy.DestinationTableName);
             bulkCopy.WriteToServer(dt);
         }
 
@@ -105,19 +147,16 @@ create table [{BulkLoadTableName}] (
             using var cmd = DbConnection.CreateCommand();
             cmd.CommandTimeout = CommandTimeout;
             cmd.CommandText = $@"
-declare @JsonKeyPath as nvarchar(50) = '$.' + @KeyField;
-merge [{TableName}] as target
-using #TempJsonObjects as source 
-on json_value(target.JsonObject, @JsonKeyPath) = json_value(source.JsonObject, @JsonKeyPath)
+merge [{TableName}] as target using [{BulkLoadTableName}]  as source on target.Id = source.Id
 when matched then 
 	update set JsonObject = source.JsonObject, UpdatedOn = CURRENT_TIMESTAMP
 when not matched then
-	insert (JsonObject, UpdatedOn)
-	values (source.JsonObject, CURRENT_TIMESTAMP);
+	insert (Id, JsonObject, UpdatedOn) values (source.Id, source.JsonObject, CURRENT_TIMESTAMP);
 ";
-            cmd.Parameters.AddWithValue("@KeyField", PrimaryKeyField);
-            Log.Debug("Merge data into {TableName} using {CommandText}", TableName, cmd.CommandText);
-            cmd.ExecuteNonQuery();
+            Log.Debug("Merge data into {TableName}", TableName);
+            Log.Verbose("Using {CommandText}", cmd.CommandText);
+            int records = cmd.ExecuteNonQuery();
+            Log.Debug("Merged {records} records.", records);
         }
     }
 }

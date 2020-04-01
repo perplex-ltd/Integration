@@ -120,6 +120,10 @@ namespace Perplex.ArtsCouncil.MPImport
             get => (string)this["OppositionPosts"];
             set => this["OppositionPosts"] = value;
         }
-
+        public int? ConstituencyId
+        {
+            get => (int?)this["ConstituencyId"];
+            set => this["ConstituencyId"] = value;
+        }
     }
 }

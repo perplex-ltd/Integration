@@ -16,13 +16,25 @@ namespace Perplex.Integration.Core.Steps
 {
 
     [Configuration.Step( Description = "Filter out any unchanged rows.")]
-    public class IgnoreUnchangedRows : SqlJsonSink, IDataSource
+    public class FilterRepeatRequests : SqlJsonSink, IDataSource
     {
         public IPipelineOutput Output { get; set; }
 
+        private readonly IDictionary<string, Row> rows = new Dictionary<string, Row>();
 
-        public IgnoreUnchangedRows()
+        public FilterRepeatRequests()
         {
+            //BulkLoadTableName = "TempJsonObjects";
+        }
+
+        public override void Initialise()
+        {
+            base.Initialise();
+            rows.Clear();
+        }
+        protected override void OnRowRemoved(string key, Row row)
+        {
+            rows.Add(key, row);
         }
 
         /// <summary>
@@ -34,23 +46,20 @@ namespace Perplex.Integration.Core.Steps
             using var cmd = DbConnection.CreateCommand();
             cmd.CommandTimeout = CommandTimeout;
             cmd.CommandText = $@"
-declare @JsonKeyPath as nvarchar(50) = '$.' + @KeyField;
-select o1.JsonObject from [{BulkLoadTableName}] o1
-left join [{TableName}] o2 on json_value(o1.JsonObject, @JsonKeyPath) = json_value(o2.JsonObject, @JsonKeyPath)
-where
-    json_value(o2.JsonObject, @JsonKeyPath) is null or
-	o1.JsonObject != o2.JsonObject;
+select o1.Id from [{BulkLoadTableName}] o1 left join [{TableName}] o2 on o1.Id = o2.Id
+where o2.Id is null or o1.JsonObject != o2.JsonObject;
 ";
-            cmd.Parameters.AddWithValue("@KeyField", PrimaryKeyField);
             Log.Verbose("Retrieving changed objects using {CommandText}", cmd.CommandText);
             using var reader = cmd.ExecuteReader();
+            long counter = 0;
             while(reader.Read())
             {
-                var jsonObject = reader.GetString(0);
-                Log.Verbose("Read {jsonObject}", jsonObject);
-                var row = Row.FromJson(jsonObject);
-                Output.AddRow(row);
+                var id = reader.GetString(0);
+                Output.AddRow(rows[id]);
+                counter++;
             }
+            reader.Close();
+            Log.Information("Retrieved {counter} changed records.", counter);
         }
 
     }

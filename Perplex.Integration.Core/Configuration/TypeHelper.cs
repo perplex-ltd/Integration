@@ -42,7 +42,7 @@ namespace Perplex.Integration.Core.Configuration
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidConfigurationException("{0} is not a valid type ({1}).", ex.Message);
+                    throw new InvalidConfigurationException($"{typeName} is not a valid type.", ex);
                 }
             }
         }
@@ -76,7 +76,7 @@ namespace Perplex.Integration.Core.Configuration
             }
             catch (Exception ex)
             {
-                throw new InvalidConfigurationException("Cannot convert {0} to {1} ({2}.", value, type, ex.Message);
+                throw new InvalidConfigurationException($"Cannot convert {value} to {type} ({ex.Message}).", ex);
             }
         }
     }

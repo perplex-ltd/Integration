@@ -20,7 +20,6 @@ namespace Perplex.Integration.Core.Internal
 
         public void AddRow(Row row)
         {
-            Log.Verbose("Adding {row}", row);
             Q.Enqueue(row);
         }
 
@@ -37,7 +36,6 @@ namespace Perplex.Integration.Core.Internal
         {
             if (Q.Count == 0) throw new NoMoreRowsException();
             var row = Q.Dequeue();
-            Log.Verbose("Removing {row}", row);
             return row;
         }
 

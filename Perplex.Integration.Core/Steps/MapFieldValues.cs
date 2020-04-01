@@ -12,7 +12,7 @@ namespace Perplex.Integration.Core.Steps
     {
         public ColumnMapping()
         {
-            Mappings = new List<Mapping>();
+            Mappings = new List<FieldRenameMapping>();
         }
 
         [Property(Inline = true, Required = true)]
@@ -24,7 +24,7 @@ namespace Perplex.Integration.Core.Steps
             set { TargetTypeAsType = TypeHelper.GetTypeFromString(value); }
         }
         [Property("mapping")]
-        public IList<Mapping> Mappings { get; private set; }
+        public IList<FieldRenameMapping> Mappings { get; private set; }
 
         public Type TargetTypeAsType { get; private set; }
 

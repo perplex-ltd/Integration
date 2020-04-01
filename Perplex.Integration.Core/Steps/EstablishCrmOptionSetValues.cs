@@ -38,6 +38,8 @@ namespace Perplex.Integration.Core.Steps
         private bool isGlobalOptionSet;
         private string optionSetName;
 
+        public EstablishCrmOptionSetValues() { }
+
         public override void Initialise()
         {
             base.Initialise();
@@ -64,6 +66,8 @@ namespace Perplex.Integration.Core.Steps
             while (Input.HasRowsAvailable)
             {
                 var row = Input.RemoveRow();
+                if (!row.ContainsKey(LabelKey))
+                    throw new StepException($"The current row does not contain a field '{LabelKey}'");
                 var label = row[LabelKey] as string;
                 if (string.IsNullOrEmpty(label)) continue;
                 if (!options.ContainsValue(label))
@@ -85,6 +89,7 @@ namespace Perplex.Integration.Core.Steps
                     // add existing option set value to output
                     var optionValue = options.FirstOrDefault(kvp => kvp.Value == label).Key;
                     row[LabelKey + "$value"] = optionValue;
+                    Output.AddRow(row);
                 }
             }
             if (needsPublishing)
@@ -129,7 +134,7 @@ $@"<importexportxml>
                 request.EntityLogicalName = EntityLogicalName;
                 request.AttributeLogicalName = AttributeLogicalName;
             }
-            Log.Debug("Adding option '{label}'", label);
+            Log.Debug("Adding option '{label}' ({request})", label, Newtonsoft.Json.JsonConvert.SerializeObject(request));
             var response = (InsertOptionValueResponse)CrmServiceClient.Execute(request);
             return response.NewOptionValue;
         }

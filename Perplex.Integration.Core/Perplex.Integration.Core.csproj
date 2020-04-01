@@ -38,6 +38,10 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>
+    </ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Crm.Sdk.Proxy, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.CrmSdk.CoreAssemblies.9.0.2.21\lib\net462\Microsoft.Crm.Sdk.Proxy.dll</HintPath>
@@ -99,29 +103,38 @@
   <ItemGroup>
     <Compile Include="Configuration\ConnectionStringAttribute.cs" />
     <Compile Include="Configuration\ConfigFactory.cs" />
+    <Compile Include="Configuration\InvalidConfigurationExcerption.cs" />
     <Compile Include="Configuration\StepAttribute.cs" />
     <Compile Include="Configuration\IntegrationConfig.cs" />
     <Compile Include="Configuration\PropertyAttribute.cs" />
     <Compile Include="Configuration\IntegerPropertyAttribute.cs" />
     <Compile Include="Configuration\TypeHelper.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Internal\OutputPipeline.cs" />
     <Compile Include="IPipelineOutput.cs" />
     <Compile Include="IPipelineInput.cs" />
     <Compile Include="Internal\NullPipeline.cs" />
+    <Compile Include="Steps\AbstractCrmBatchRequestStep.cs" />
     <Compile Include="Steps\AbstractCrmStep.cs" />
     <Compile Include="Steps\AbstractSqlStep.cs" />
+    <Compile Include="Steps\CrmMergeDuplicates.cs" />
+    <Compile Include="Steps\Distinct.cs" />
     <Compile Include="Steps\EstablishCrmOptionSetValues.cs" />
+    <Compile Include="Steps\FieldAddMapping.cs" />
+    <Compile Include="Steps\FieldRemoveMapping.cs" />
+    <Compile Include="Steps\FindDuplicates.cs" />
+    <Compile Include="Steps\LimitRecords.cs" />
     <Compile Include="Steps\SqlSink.cs" />
     <Compile Include="Steps\SqlSource.cs" />
     <Compile Include="Steps\CrmSource.cs" />
-    <Compile Include="Steps\IgnoreUnchangedRows.cs" />
+    <Compile Include="Steps\FilterRepeatRequests.cs" />
     <Compile Include="Steps\CrmSink.cs" />
     <Compile Include="DataSinkStep.cs" />
     <Compile Include="DataProcessStep.cs" />
     <Compile Include="DataSourceStep.cs" />
     <Compile Include="Job.cs" />
-    <Compile Include="Steps\Mapping.cs" />
-    <Compile Include="Steps\RenameFieldNames.cs" />
+    <Compile Include="Steps\FieldRenameMapping.cs" />
+    <Compile Include="Steps\TransformFields.cs" />
     <Compile Include="Steps\MapFieldValues.cs" />
     <Compile Include="JobStep.cs" />
     <Compile Include="Row.cs" />

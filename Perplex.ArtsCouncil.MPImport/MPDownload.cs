@@ -29,6 +29,7 @@ namespace Perplex.ArtsCouncil.MPImport
                 .Expand("MemberGovernmentPosts/GovernmentPost")
                 .Expand("MemberOppositionPosts/OppositionPost")
                 .Expand("MemberParliamentaryPosts/ParliamentaryPost")
+                .Expand("MemberConstituencies")
                 .Expand("MemberAddresses")
                 .Where(m => m.CurrentStatusActive || m.EndDate > new DateTime(2015, 05, 06));
 
@@ -50,6 +51,7 @@ namespace Perplex.ArtsCouncil.MPImport
                 if (m.House == "Commons")
                 {
                     member.Constituency = m.MembershipFrom;
+                    member.ConstituencyId = m.MemberConstituencies.Where(c => c.EndDate is null).FirstOrDefault()?.Constituency_Id;
                 }
                 else if (m.House == "Lords")
                 {

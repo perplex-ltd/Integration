@@ -32,6 +32,7 @@ namespace Perplex.Integration.RunJob
         }
 
         readonly Options options;
+        IntegrationConfig config;
         Program(Options options)
         {
             this.options = options;
@@ -50,18 +51,20 @@ namespace Perplex.Integration.RunJob
                 .CreateLogger();
             try
             {
-                IntegrationConfig config = ConfigFactory.Default.LoadFromFile(options.IntegrationConfigFile);
-                if ( !config.Jobs.ContainsKey(options.Job))
+                config = ConfigFactory.Default.LoadFromFile(options.IntegrationConfigFile);
+
+                if (options.ListJobs)
                 {
-                    Log.Fatal("Job {Job} is not defined in configuration", options.Job);
-                    return;
+                    ListJobs();
                 }
-                var job = config.Jobs[options.Job];
-                job.Run();
+                else
+                {
+                    RunJob();
+                }
             }
             catch (InvalidConfigurationException ex)
             {
-                Log.Fatal(ex, "Failed to load configuration");
+                Console.WriteLine($"Failed to load configuration: {ex.Message}");
             }
             catch (Exception ex)
             {
@@ -69,5 +72,30 @@ namespace Perplex.Integration.RunJob
             }
         }
 
+        private void ListJobs()
+        {
+            const int padding = 30;
+            Console.WriteLine($"Jobs defined in {options.IntegrationConfigFile}:");
+            Console.WriteLine();
+            Console.WriteLine("ID".PadRight(padding) + "Description");
+            Console.WriteLine("--".PadRight(padding) + "-----------");
+            foreach (var job in config.Jobs.Values)
+            {
+                Console.WriteLine($"{job.Id.PadRight(padding)}{job.Description}");
+            }
+            Console.WriteLine();
+        }
+
+        private void RunJob()
+        {
+            if (!config.Jobs.ContainsKey(options.Job))
+            {
+                Console.WriteLine($"Job {options.Job} is not defined in configuration");
+                ListJobs();
+                return;
+            }
+            var job = config.Jobs[options.Job];
+            job.Run();
+        }
     }
 }

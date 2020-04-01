@@ -1,4 +1,5 @@
-﻿using Perplex.Integration.Core.Internal;
+﻿using Perplex.Integration.Core.Configuration;
+using Perplex.Integration.Core.Internal;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -15,22 +16,51 @@ namespace Perplex.Integration.Core
         private readonly IList<JobStep> steps = new List<JobStep>();
 
         public string Id { get; set; }
-
+        public object Description { get; set; }
+        /// <summary>
+        /// Adds a step to the job and connects it to the last step, if necessary.
+        /// </summary>
+        /// <param name="step"></param>
         public void AddStep(JobStep step)
         {
-            // Add pipeline buffer object between data sink and data source
+            if (step is IDataSource source)
+            {
+                source.Output = new OutputPipeline();
+            }
+            var lastStep = steps.LastOrDefault();
+            ConnectAndAddStep(step, lastStep);
+        }
+
+        /// <summary>
+        /// Add a step to the job and connects it to <paramref name="sourceStepId"/>.
+        /// </summary>
+        /// <param name="step">The step to add.</param>
+        /// <param name="sourceStepId">The Id of the data source step.</param>
+        /// <exception cref="InvalidConfigurationException">sourceStepId doesn't exist.</exception>
+        public void AddStep(JobStep step, string sourceStepId)
+        {
+            if (step is null)
+                throw new ArgumentNullException(nameof(step));
+            var sourceStep = steps.FirstOrDefault(s => s.Id == sourceStepId);
+            if (sourceStep is null) 
+                throw new InvalidConfigurationException($"Data Source step {sourceStepId} doesn't exist.");
+            if (!(sourceStep is IDataSource))
+                throw new InvalidConfigurationException($"Data Source Step {sourceStepId} is not a data source.");
+            if (!(step is IDataSink))
+                throw new InvalidConfigurationException($"Step {step.Id} is not a Data Sink.");
+            ConnectAndAddStep(step, sourceStep);
+        }
+
+        private void ConnectAndAddStep(JobStep step, JobStep sourceStep)
+        {
             if (step is IDataSink)
             {
-                var lastStep = steps.LastOrDefault();
-                if (!(lastStep is IDataSource))
-                    throw new InvalidOperationException("Can only add a Data Sink after a Data Source.");
-                var pipe = new PipelineBuffer();
-                ((IDataSource)lastStep).Output = pipe;
-                ((IDataSink)step).Input = pipe;
+                if (!(sourceStep is IDataSource lastSource))
+                    throw new InvalidOperationException($"Step {sourceStep.Id} must be a Data Source to be connected to {step.Id}.");
+                ((IDataSink)step).Input = ((OutputPipeline)lastSource.Output).CreateInputPipeline();
             }
             steps.Add(step);
         }
-
 
         /// <summary>
         /// Runs all steps in this job.
@@ -51,7 +81,7 @@ namespace Perplex.Integration.Core
                     }
                     else
                     {
-                        Log.Information("Running step {step}", step.Id);
+                        Log.Information("Running step {step} ({type})", step.Id, step.Type);
                     }
                     Log.Debug("Initialising...");
                     step.Initialise();
@@ -62,15 +92,17 @@ namespace Perplex.Integration.Core
                 }
                 catch (StepException ex)
                 {
-                    Log.Fatal("Error while running step {step.Id}: {ex.Message}", step.Id, ex.Message);
+                    Log.Fatal("Error while running step {step}: {ex}", step.Id, ex.Message);
+                    break;
                 }
                 catch (Exception ex)
                 {
-                    Log.Fatal(ex, "Error while running step {step.Id}: {ex.Message}", step.Id, ex.Message);
+                    Log.Fatal(ex, "Unexpected error while running step {step}: {ex}", step.Id, ex.Message);
+                    break; ;
                 }
             }
             stopwatch.Stop();
-            Log.Information("Job {jobId} finished in {stopwatch.Elapsed}.", Id, stopwatch.Elapsed);
+            Log.Information("Job {jobId} finished in {elapsed}.", Id, stopwatch.Elapsed);
         }
 
         private void ValidateJob()

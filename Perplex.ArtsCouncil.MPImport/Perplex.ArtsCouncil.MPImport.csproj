@@ -71,6 +71,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Connected Services\Members of Parliament Service\Members.cs" />
+    <Compile Include="ConstituencySource.cs" />
     <Compile Include="Member.cs" />
     <Compile Include="MPDownload.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

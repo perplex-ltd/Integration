@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,6 +17,20 @@ namespace Perplex.Integration.Core
 
 
         public Row() { }
+
+        /// <summary>
+        /// Creates a row that is a copy of <paramref name="copy"/>.
+        /// </summary>
+        /// <param name="copy"></param>
+        public Row(Row copy)
+        {
+            if (copy == null) throw new ArgumentNullException(nameof(copy));
+            foreach (var kvp in copy)
+            {
+                base.Add(kvp.Key, kvp.Value);
+            }
+        }
+
         private Row(IDictionary<string, object> dictionary)
         {
             foreach (var kvp in dictionary)
@@ -37,7 +52,7 @@ namespace Perplex.Integration.Core
         public static Row FromJson(string values)
         {
             return new Row(
-                Newtonsoft.Json.JsonConvert.DeserializeObject<IDictionary<string, object>>(values)
+                JsonConvert.DeserializeObject<IDictionary<string, object>>(values)
                 );
         }
 

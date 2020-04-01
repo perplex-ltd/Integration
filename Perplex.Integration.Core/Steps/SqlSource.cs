@@ -2,6 +2,7 @@
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,23 +21,30 @@ namespace Perplex.Integration.Core.Steps
             using var cmd = DbConnection.CreateCommand();
             cmd.CommandText = Query;
             cmd.CommandTimeout = CommandTimeout;
-            using var rs = cmd.ExecuteReader();
-            int counter = 0;
-            while (rs.Read())
+            try
             {
-                counter++;
-                var row = new Row();
-                for (int i = 0; i < rs.VisibleFieldCount; i++)
+                using var rs = cmd.ExecuteReader();
+                int counter = 0;
+                while (rs.Read())
                 {
-                    row.Add(rs.GetName(i), rs.GetValue(i));
+                    counter++;
+                    var row = new Row();
+                    for (int i = 0; i < rs.VisibleFieldCount; i++)
+                    {
+                        row.Add(rs.GetName(i), rs.GetValue(i));
+                    }
+                    Output.AddRow(row);
+                    if (counter % 5000 == 0)
+                    {
+                        Log.Debug("Got {counter} rows", counter);
+                    }
                 }
-                Output.AddRow(row);
-                if (counter % 5000 == 0)
-                {
-                    Log.Debug("Got {counter} rows", counter);
-                }
+                Log.Information("Retrieved a total of {counter} rows", counter);
+            } 
+            catch (SqlException ex)
+            {
+                throw new StepException($"Failed to run query: {ex.Message}", ex);
             }
-            Log.Debug("Got a total of {counter} rows", counter);
         }
     }
 }

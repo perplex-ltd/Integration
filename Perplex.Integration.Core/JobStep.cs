@@ -1,9 +1,6 @@
 ﻿using Perplex.Integration.Core.Configuration;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Reflection;
 
 namespace Perplex.Integration.Core
 {
@@ -12,8 +9,17 @@ namespace Perplex.Integration.Core
 
         [Property("id", Required = true, Inline = true)]
         public string Id { get; set; }
+        public string Type { get; private set; }
 
-        
+        public JobStep()
+        {
+            StepAttribute stepAttribute = GetType().GetCustomAttribute<StepAttribute>();
+            if (stepAttribute != null)
+            {
+                Type = stepAttribute.Name ?? GetType().Name;
+            }
+        }
+
         /// <summary>
         /// Initialise the step.
         /// </summary>
@@ -36,8 +42,9 @@ namespace Perplex.Integration.Core
         /// </remarks>
         public virtual void Cleanup() { }
         /// <summary>
-        /// Validate the configuration of a step before the first step in the job is run.
+        /// Validate the configuration of a step before the first step in the job is run. 
         /// </summary>
+        /// <exception cref="InvalidConfigurationException">Invalid configuration.</exception>
         public virtual void Validate() {}
 
         /// <summary>

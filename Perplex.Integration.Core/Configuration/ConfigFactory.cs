@@ -11,19 +11,7 @@ using System.Xml.Linq;
 namespace Perplex.Integration.Core.Configuration
 {
 
-    [Serializable()]
-    public class InvalidConfigurationException : Exception
-    {
-        private InvalidConfigurationException() { }
-        public InvalidConfigurationException(string message) : base(message) { }
-        public InvalidConfigurationException(string message, Exception innerException) : base(message, innerException) { }
-        public InvalidConfigurationException(string message, params object[] args) : base(string.Format(System.Globalization.CultureInfo.InvariantCulture, message, args)) { }
-
-        protected InvalidConfigurationException(System.Runtime.Serialization.SerializationInfo serializationInfo, System.Runtime.Serialization.StreamingContext streamingContext)
-        {
-            throw new NotImplementedException();
-        }
-    }
+    
 
     public class ConfigFactory
     {
@@ -70,19 +58,21 @@ namespace Perplex.Integration.Core.Configuration
             foreach (var jobElement in root.Elements("jobs").Elements("job"))
             {
                 var jobId = jobElement.Attribute("id")?.Value;
+                var jobDescription = jobElement.Attribute("description")?.Value;
                 if (string.IsNullOrEmpty(jobId)) throw new InvalidConfigurationException("No Job Id specified.");
                 if (config.Jobs.ContainsKey(jobId)) throw new InvalidConfigurationException($"Job '{jobId}' exists more than once in config.");
                 var job = new Job()
                 {
-                    Id = jobId
+                    Id = jobId,
+                    Description = jobDescription
                 };
                 foreach (var stepElement in jobElement.Elements("step"))
                 {
                     var stepId = stepElement.Attribute("id")?.Value;
                     if (string.IsNullOrEmpty(stepId)) throw new InvalidConfigurationException("No step id specified.");
                     var stepType = stepElement.Attribute("type")?.Value;
-                    if (string.IsNullOrEmpty(stepType)) throw new InvalidConfigurationException("No step type specified.");
-                    if (!steps.ContainsKey(stepType)) throw new InvalidConfigurationException("{0} is not a valid step type.", stepType);
+                    if (string.IsNullOrEmpty(stepType)) throw new InvalidConfigurationException($"No step type specified for step {stepId}.");
+                    if (!steps.ContainsKey(stepType)) throw new InvalidConfigurationException($"'{stepType}' is not a valid step type.");
                     var step = (JobStep)Activator.CreateInstance(steps[stepType]);
                     try
                     {
@@ -95,7 +85,9 @@ namespace Perplex.Integration.Core.Configuration
                                 string.IsNullOrEmpty(stepId) ? "anonymous" : stepId, jobId, ex.Message),
                             ex);
                     }
-                    job.AddStep(step);
+                    var sourceId = stepElement.Attribute("source")?.Value;
+                    if (sourceId != null) job.AddStep(step, sourceId);
+                    else job.AddStep(step);
                 }
                 config.Jobs.Add(job.Id, job);
             }
@@ -117,7 +109,7 @@ namespace Perplex.Integration.Core.Configuration
                                           where e.Attribute("name")?.Value == p.Attribute.Name
                                           select e.Value;
                     var connection = connectionQuery.FirstOrDefault();
-                    if (string.IsNullOrEmpty(connection)) throw new InvalidConfigurationException("Connection {0} not found.", p.Attribute.Name);
+                    if (string.IsNullOrEmpty(connection)) throw new InvalidConfigurationException($"Connection {p.Attribute.Name} not found.");
                     if (connectionStrings.ContainsKey(connection))
                     {
                         p.Property.SetValue(obj, connectionStrings[connection]);
@@ -125,8 +117,7 @@ namespace Perplex.Integration.Core.Configuration
                     else if (p.Attribute.Required)
                     {
                         throw new InvalidConfigurationException(
-                            "Required connection property {0} is missing or no connection string defined.",
-                            p.Attribute.Name);
+                            $"Required connection property '{p.Attribute.Name}' is missing or no connection string defined.");
                     }
                 }
                 else
@@ -168,9 +159,7 @@ namespace Perplex.Integration.Core.Configuration
                         }
                         else if (p.Attribute.Required)
                         {
-                            throw new InvalidConfigurationException(
-                                "Required connection property {0} is missing or no connection string defined.",
-                                p.Attribute.Name);
+                            throw new InvalidConfigurationException($"Required property '{p.Property.Name}' is missing.");
                         }
                     }
 
@@ -226,7 +215,7 @@ namespace Perplex.Integration.Core.Configuration
             }
             else
             {
-                throw new InvalidConfigurationException("Cannot convert type {0}.", type);
+                throw new InvalidConfigurationException($"Cannot convert type {type}.");
             }
         }
     }

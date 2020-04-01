@@ -7,18 +7,18 @@ using System.Threading.Tasks;
 
 namespace Perplex.Integration.Core.Steps
 {
-    public class Mapping
+    public class FieldAddMapping
     {
-        public Mapping() { }
-        public Mapping(string from, string to)
+        public FieldAddMapping() { }
+        public FieldAddMapping(string field, string value)
         {
-            From = from;
-            To = to;
+            Field = field;
+            Value = value;
         }
 
         [Property(Inline = true, Required = true)]
-        public string From { get; set; }
+        public string Field { get; set; }
         [Property(Inline = true, Required = true)]
-        public string To { get; set; }
+        public string Value { get; set; }
     }
 }

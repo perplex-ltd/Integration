@@ -16,13 +16,15 @@ namespace Perplex.Integration.RunJob
            Required = false)]
         public string IntegrationConfigFile { get; set; }
 
-        [Option('j', "job", Default = null,
-            HelpText = "The job to run.",
+        [Option('j', "job", Default = null, HelpText = "The job to run.",  SetName = "RunJob",
            Required = true)]
         public string Job { get; set; }
+
         [Option('l', "logLevel", Default = LogEventLevel.Debug, HelpText = "The minimum log level (Verbose, Debug, Information, Warning, Error or Fatal)")]
         public LogEventLevel LogLevel { get; internal set; }
 
+        [Option('s', "show", Default = false, HelpText = "Show all defined jobs", Required = true, SetName = "ShowJobs")]
+        public bool ListJobs { get; set;  }
 
     }
 }
