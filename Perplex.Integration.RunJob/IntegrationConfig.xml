@@ -1,17 +1,51 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <integrationConfig>
 
-  <extensions>
-    <assembly name="Perplex.ArtsCouncil.MPImport" />
-  </extensions>
+	<extensions>
+		<assembly name="Perplex.ArtsCouncil.MPImport" />
+	</extensions>
 
-  <connectionStrings>
-    <connectionString name="CRM">AuthType=Office365;Username=perplex@artscouncil.org.uk;Password=*****;Url=https://arts1.crm11.dynamics.com;Timeout=00:05:00</connectionString>
-    <connectionString name="StagingDB">Data Source=.;Initial Catalog=ArtsCouncil;Integrated Security=True</connectionString>
-    <connectionString name="ParliamentMembersPlatform">http://data.parliament.uk/membersdataplatform/open/OData.svc</connectionString>
-  </connectionStrings>
-  <jobs>
-    <!--<job id="ImportMPs" >
+	<connectionStrings>
+		<connectionString name="CRM-bla">AuthType=Office365;Username=perplex@artscouncil.org.uk;Password=*****;Url=https://arts1.crm11.dynamics.com;Timeout=00:05:00</connectionString>
+		<connectionString name="StagingDB">Data Source=.;Initial Catalog=ArtsCouncil;Integrated Security=True</connectionString>
+		<connectionString name="ParliamentMembersPlatform">http://data.parliament.uk/membersdataplatform/open/OData.svc</connectionString>
+	</connectionStrings>
+	<jobs>
+		<job id="MarketingListMemberCount">
+			<step id="Fetch List and member count" type="CrmSource">
+				<connection name="CRM">CRM</connection>
+				<fetchXml>
+					<![CDATA[
+<fetch distinct="False" top="1">
+  <entity name="list">
+    <attribute name="listname" />
+    <attribute name="listid" />
+    <attribute name="membercount" />
+    <attribute name="ownerid" />
+    <filter>
+      <condition attribute="type" operator="eq" value="0" />
+      <condition attribute="membertype" operator="eq" value="2" />
+      <condition attribute="statecode" operator="eq" value="0" />
+    </filter>
+  </entity>
+</fetch>
+]]>
+				</fetchXml>
+			</step>
+			<step id="transfrom Fields" type="TransformFields">
+				<add field="ace_date" value="=now()" />
+				<rename from="listname" to="ace_name" />
+				<rename from="listid" to="ace_list" />
+				<rename from="membercount" to="ace_membercount" />
+				<rename from="listid" to="ace_list" />
+			</step>
+			<step id="Upsert Marketing List Member counts" type="CrmSink">
+				<connection name="CRM">CRM</connection>
+				<operation>Insert</operation>
+				<entityLogicalName>ace_marketinglistmembercount</entityLogicalName>
+			</step>
+		</job>
+		<!--<job id="ImportMPs" >
       <step id="ImportMPs" type="Parliament Members Source">
         <connection name="OdataUrl">ParliamentMembersPlatform</connection>
       </step>
@@ -50,40 +84,40 @@
         <maxNumberOfRequests>100</maxNumberOfRequests>
       </step>
     </job>-->
-    <job id="ImportMPs">
-      <!---->
-      <step id="Get MPs From data.parliament.uk" type="Parliament Members Source">
-        <connection name="OdataUrl">ParliamentMembersPlatform</connection>
-      </step>
-      <step id="Map House to option set values" type="Field Value Mapper">
-        <mappings column="House" targetType="int">
-          <mapping from="Commons" to="805290000" />
-          <mapping from="Lords" to="805290001" />
-        </mappings>
-      </step>
-      <step id="renameFieldsToCrmLogicalNames" type="Field Renamer">
-        <rename from="Id" to="ace_mpmemberid" />
-        <rename from="FirstName" to="firstname" />
-        <rename from="MiddleNames" to="middlename" />
-        <rename from="LastName" to="lastname" />
-        <rename from="AddressAs" to="ace_addressas" />
-        <rename from="Party" to="ace_politicalparty" />
-        <rename from="IsActiveMember" to="ace_isactiveparliamentmember" />
-        <rename from="StartDate" to="ace_parliamentstartdate" />
-        <rename from="DateOfBirth" to="birthdate" />
-        <rename from="DateOfDeath" to="ace_deceasedon" />
-        <rename from="House" to="ace_parliamenthouse" />
-        <rename from="Constituency" to="new_constituency" />
-        <rename from="TypeOfPeer" to="ace_typeofpeer" />
-        <rename from="EndDate" to="ace_parliamentenddate" />
-        <rename from="EndReason" to="ace_parliamentendreason" />
-        <rename from="EmailAddress1" to="emailaddress1" />
-        <rename from="EmailAddress2" to="emailaddress2" />
-        <rename from="EmailAddress3" to="emailaddress3" />
-        <rename from="ParliamentaryPosts" to="ace_parliamentaryposts" />
-      </step>
-      <!---->
-      <!--
+		<job id="ImportMPs">
+			<!---->
+			<step id="Get MPs From data.parliament.uk" type="Parliament Members Source">
+				<connection name="OdataUrl">ParliamentMembersPlatform</connection>
+			</step>
+			<step id="Map House to option set values" type="Field Value Mapper">
+				<mappings column="House" targetType="int">
+					<mapping from="Commons" to="805290000" />
+					<mapping from="Lords" to="805290001" />
+				</mappings>
+			</step>
+			<step id="renameFieldsToCrmLogicalNames" type="TransformFields">
+				<rename from="Id" to="ace_mpmemberid" />
+				<rename from="FirstName" to="firstname" />
+				<rename from="MiddleNames" to="middlename" />
+				<rename from="LastName" to="lastname" />
+				<rename from="AddressAs" to="ace_addressas" />
+				<rename from="Party" to="ace_politicalparty" />
+				<rename from="IsActiveMember" to="ace_isactiveparliamentmember" />
+				<rename from="StartDate" to="ace_parliamentstartdate" />
+				<rename from="DateOfBirth" to="birthdate" />
+				<rename from="DateOfDeath" to="ace_deceasedon" />
+				<rename from="House" to="ace_parliamenthouse" />
+				<rename from="Constituency" to="new_constituency" />
+				<rename from="TypeOfPeer" to="ace_typeofpeer" />
+				<rename from="EndDate" to="ace_parliamentenddate" />
+				<rename from="EndReason" to="ace_parliamentendreason" />
+				<rename from="EmailAddress1" to="emailaddress1" />
+				<rename from="EmailAddress2" to="emailaddress2" />
+				<rename from="EmailAddress3" to="emailaddress3" />
+				<rename from="ParliamentaryPosts" to="ace_parliamentaryposts" />
+			</step>
+			<!---->
+			<!--
       <step id="Mock Source" type="ObjectSource">
         <jsonObject>
           {"firstname":"Kelvin","ace_politicalparty":"Independent","ace_isactiveparliamentmember":false,
@@ -102,33 +136,33 @@
         </jsonObject>
       </step>
       -->
-      <step id="Ignore unchanged MPs" type="IgnoreUnchangedRows" >
-        <connection name="LocalDB">StagingDB</connection>
-        <tableName>MembersOfParliament</tableName>
-        <primaryKeyField>ace_mpmemberid</primaryKeyField>
-      </step>
-      <step id="Upload MPs CRM" type="CrmSink" >
-        <connection name="CRM">CRM</connection>
-        <connection name="LocalDB">StagingDB</connection>
-        <operation>Upsert</operation>
-        <entityLogicalName>contact</entityLogicalName>
-        <entityKey>ace_mpmemberid</entityKey>
-        <maxNumberOfRequests>250</maxNumberOfRequests>
-        <alternateKey>ace_mpmemberid</alternateKey>
-        <timeout>600</timeout>
-      </step>
-      <step id="Save uploaded MPs to DB" type="SqlJsonSink">
-        <connection name="LocalDB">StagingDB</connection>
-        <tableName>MembersOfParliament</tableName>
-        <primaryKeyField>ace_mpmemberid</primaryKeyField>
-        <commandTimeout>600</commandTimeout>
-      </step>
-    </job>
-    <job id="test">
-      <step id="Get Crm Contacts" type="CrmSource">
-        <connection name="CRM">CRM</connection>
-        <fetchXml>
-          <![CDATA[
+			<step id="Ignore unchanged MPs" type="FilterRepeatRequests" >
+				<connection name="db">StagingDB</connection>
+				<tableName>MembersOfParliament</tableName>
+				<primaryKeyField>ace_mpmemberid</primaryKeyField>
+			</step>
+			<step id="Upload MPs CRM" type="CrmSink" >
+				<connection name="CRM">CRM</connection>
+				<connection name="db">StagingDB</connection>
+				<operation>Upsert</operation>
+				<entityLogicalName>contact</entityLogicalName>
+				<entityKey>ace_mpmemberid</entityKey>
+				<maxNumberOfRequests>250</maxNumberOfRequests>
+				<alternateKey>ace_mpmemberid</alternateKey>
+				<timeout>600</timeout>
+			</step>
+			<step id="Save uploaded MPs to DB" type="SqlJsonSink">
+				<connection name="db">StagingDB</connection>
+				<tableName>MembersOfParliament</tableName>
+				<primaryKeyField>ace_mpmemberid</primaryKeyField>
+				<commandTimeout>600</commandTimeout>
+			</step>
+		</job>
+		<job id="test">
+			<step id="Get Crm Contacts" type="CrmSource">
+				<connection name="CRM">CRM</connection>
+				<fetchXml>
+					<![CDATA[
 <fetch>
   <entity name="contact" >
     <attribute name="contactid" />
@@ -144,9 +178,9 @@
   </entity>
 </fetch>
 ]]>
-        </fetchXml>
-      </step>
-      <step id="Log rows" type="RowLogger" />
-    </job>
-  </jobs>
+				</fetchXml>
+			</step>
+			<step id="Log rows" type="RowLogger" />
+		</job>
+	</jobs>
 </integrationConfig>

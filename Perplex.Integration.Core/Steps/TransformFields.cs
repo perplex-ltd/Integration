@@ -46,7 +46,7 @@ namespace Perplex.Integration.Core.Steps
                 }
                 foreach (var mapping in Add)
                 {
-                    outRow[mapping.Field] = mapping.Value;
+                    outRow[mapping.Field] = mapping.GetValue();
                 }
                 Output.AddRow(outRow);
             }

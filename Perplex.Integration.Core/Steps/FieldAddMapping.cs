@@ -18,7 +18,28 @@ namespace Perplex.Integration.Core.Steps
 
         [Property(Inline = true, Required = true)]
         public string Field { get; set; }
+        /// <summary>
+        /// The raw value. Use GetValue instead!
+        /// </summary>
         [Property(Inline = true, Required = true)]
         public string Value { get; set; }
+        
+        /// <summary>
+        ///  Returns the parsed value. 
+        ///  Currently, only the formula =now() is supported, which replaces the value with the current date.
+        /// </summary>
+        /// <returns></returns>
+        public object GetValue()
+        {
+            if ("=now()".Equals(Value, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return DateTime.Now;
+            } 
+            else
+            {
+                return Value;
+            }
+        }
+
     }
 }

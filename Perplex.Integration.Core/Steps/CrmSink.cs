@@ -389,7 +389,8 @@ namespace Perplex.Integration.Core.Steps
                         target = ((LookupAttributeMetadata)attribute).Targets.FirstOrDefault();
                         return (metaValues.ContainsKey("key")) ? new EntityReference(target, (string)metaValues["key"], value) :
                             new EntityReference(target, (Guid)value);
-                    case AttributeTypeCode.Owner: throw new StepAttributeTypeNotSupportedException(attribute);
+                    case AttributeTypeCode.Owner: //throw new StepAttributeTypeNotSupportedException(attribute);
+                        return new EntityReference("systemuser", (Guid)value); 
                     // String data attributes
                     case AttributeTypeCode.String:
                         return ConvertString((string)value, ((StringAttributeMetadata)attribute).MaxLength.Value);

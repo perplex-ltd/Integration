@@ -28,7 +28,8 @@ namespace Perplex.Integration.Core.Steps
             {
                 throw new StepException($"Couldn't connect to CRM: {CrmServiceClient.LastCrmError}");
             }
-            CrmServiceClient.OrganizationServiceProxy.Timeout = new TimeSpan(0, 0, Timeout);
+            //CrmServiceClient.OrganizationServiceProxy.Timeout = new TimeSpan(0, 0, Timeout);
+            CrmServiceClient.MaxConnectionTimeout = new TimeSpan(0, 0, Timeout);
         }
 
         public override void Cleanup()
